@@ -1,14 +1,26 @@
+use rust_gpiozero::*;
+use std::thread::sleep;
+use std::time::Duration;
+
 fn main() {
-    let hellos = std::env::args().nth(1).expect("You have to specify number of hello's...");
-    let args = Cli{
-        hellos: hellos.parse().expect("Not a number")
+    let blinks = std::env::args()
+        .nth(1)
+        .expect("You have to specify number of hello's...");
+    let args = Cli {
+        blinks: blinks.parse().expect("Not a number"),
     };
-    for n in 0..args.hellos {
-        print!("Hello {}\n", n);
+
+    let led = LED::new(18);
+
+    for n in 0..args.blinks {
+        print!("Blink! {}\n", n);
+        led.on();
+        sleep(Duration::from_secs(1));
+        led.off();
+        sleep(Duration::from_secs(1));
     }
 }
 
-
 struct Cli {
-    hellos: i8,
+    blinks: i8,
 }
