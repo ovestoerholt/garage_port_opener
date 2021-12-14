@@ -40,7 +40,8 @@ fn main() {
 
 /// Will return true magnetic switch is in on (connected) position.
 fn is_door_closed() -> bool {
-    true
+    let button = Button::new(23);
+    button.is_active()
 }
 
 fn toggle_relay(args: i8) {
