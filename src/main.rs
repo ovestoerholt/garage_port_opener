@@ -33,8 +33,13 @@ fn main() {
     } 
     
     if matches.is_present("status") {
-        let closed = is_door_closed();
-        println!("Door is closed? {}", closed);
+        let is_closed = is_door_closed();
+        let door_status = if is_closed {
+            "closed"
+        } else {
+            "open"
+        };
+        println!("Door is {}", door_status);
     }
 }
 
