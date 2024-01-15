@@ -1,45 +1,30 @@
+use rumqttc::{Client, MqttOptions, QoS};
 use rust_gpiozero::*;
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
-//use clap::{Arg, App, SubCommand};
-use clap::{App, Arg};
 
 fn main() {
-    let matches = App::new("Garage Port Handler")
-        .version("0.1")
-        .author("Ove Stoerholt <ovestoerholt@gmail.com>")
-        .about("Handles garage port")
-        .arg(
-            Arg::new("toggle")
-                .short('t')
-                .long("toggle")
-                .help("Toggles garage port status. If it is open it closes and vice versa.")
-                .takes_value(true),
-            )
-            .arg(
-                Arg::new("status")
-                .short('s')
-                .long("status")
-                .help("Checks status for garage port"),
-        )
-        .get_matches();
+    let mut mqttoptions = MqttOptions::new("garage", "192.168.0.105", 1883);
+    mqttoptions.set_keep_alive(Duration::from_secs(5));
 
-    if let Some(value) = matches.value_of("toggle") {
-        // or, to be safe, match the `Err`
-        match value.parse::<i8>() {
-            Ok(int_value) => toggle_relay(int_value),
-            Err(_) => println!("Not a number..."),
+    let (mut client, mut connection) = Client::new(mqttoptions, 10);
+    client
+        .subscribe("garageport/commands", QoS::AtMostOnce)
+        .unwrap();
+    thread::spawn(move || {
+        for _ in 0.. {
+            let payload: &str = door_status_payload(is_door_closed());
+            client
+                .publish("garageport/status", QoS::AtLeastOnce, false, payload)
+                .unwrap();
+            thread::sleep(Duration::from_secs(5));
         }
-    } 
-    
-    if matches.is_present("status") {
-        let is_closed = is_door_closed();
-        let door_status = if is_closed {
-            "closed"
-        } else {
-            "open"
-        };
-        println!("Door is {}", door_status);
+    });
+
+    // Iterate to poll the eventloop for connection progress
+    for (_i, notification) in connection.iter().enumerate() {
+        println!("Notification = {:?}", notification);
     }
 }
 
@@ -49,14 +34,17 @@ fn is_door_closed() -> bool {
     button.is_active()
 }
 
-fn toggle_relay(args: i8) {
-    let led = LED::new(18);
-
-    for n in 0..args {
-        print!("Blink! {}\n", n);
-        led.on();
-        sleep(Duration::from_secs(1));
-        led.off();
-        sleep(Duration::from_secs(1));
+fn door_status_payload(is_door_closed: bool) -> &'static str {
+    if is_door_closed {
+        "closed"
+    } else {
+        "open"
     }
+}
+
+fn pulse_led() {
+    let led = LED::new(18);
+    led.on();
+    sleep(Duration::from_millis(500));
+    led.off();
 }
